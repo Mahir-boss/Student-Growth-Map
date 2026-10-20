@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 
 // --- NATIVE ICONS ---
@@ -123,9 +124,9 @@ export default function App() {
   // Fetch data from Spring Boot Backend on load
   useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8080/api/skills').then(res => res.json()),
-      fetch('http://localhost:8080/api/roles').then(res => res.json()),
-      fetch('http://localhost:8080/api/prerequisites').then(res => res.json())
+      fetch(`${API_BASE}/api/skills`).then(res => res.json()),
+      fetch(`${API_BASE}/api/roles`).then(res => res.json()),
+      fetch(`${API_BASE}/api/prerequisites`).then(res => res.json())
     ]).then(([skillsData, rolesData, prereqsData]) => {
       setSkills(skillsData);
       setRoles(rolesData);
