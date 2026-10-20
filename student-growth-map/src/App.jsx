@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 const API_BASE = import.meta.env.VITE_API_URL || 'https://student-growth-map.onrender.com';
+import './App.css';
 
 
 // --- NATIVE ICONS ---
