@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://student-growth-map.onrender.com';
 
 
 // --- NATIVE ICONS ---
@@ -245,60 +245,48 @@ export default function App() {
   }, [userSkills, safeRoles]);
 
   // Actions
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
 
-    if (loginType === 'teacher') {
-      if (loginId === 'admin' && loginPass === 'admin') {
-        setView('admin');
-      } else {
-        setLoginError('Invalid Teacher credentials.');
-      }
-      return;
-    }
+    try {
+      // 1. Send credentials to your Spring Boot Auth Controller
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          username: loginId, 
+          password: loginPass 
+        })
+      });
 
-    if (loginType === 'individual') {
-      let user = students.find(s => s.id === loginId);
-      if (!user) {
-        user = { id: loginId, hasAccess: true, password: loginPass, targetRole: '', userSkills: [] };
-        setStudents(prev => [...prev, user]);
-        setTargetRole('');
-        setUserSkills([]);
-        setView('onboarding');
-        return;
+      if (!response.ok) {
+        throw new Error('Invalid credentials or unauthorized access.');
       }
-      if (user.password !== loginPass && user.password !== null) {
-        setLoginError('Incorrect password.');
-        return;
-      }
-      setTargetRole(user.targetRole || '');
-      setUserSkills(user.userSkills || []);
-      setView(user.targetRole ? 'roadmap' : 'onboarding');
-      return;
-    }
 
-    const student = students.find(s => s.id === loginId);
-    if (student) {
-      if (!student.hasAccess) {
-        setLoginError('Access Denied: Your teacher has revoked your access to the portal.');
-        return;
-      }
-      if (student.password) {
-        if (loginPass !== student.password) {
-          setLoginError('Incorrect password.');
-          return;
+      // 2. Parse the JWT token from the backend response
+      const data = await response.json();
+      const token = data.token || data.accessToken; // Adjust based on your Spring Boot DTO
+
+      if (token) {
+        // 3. Save the token to use in future secured requests
+        localStorage.setItem('sgm_jwt_token', token);
+
+        // 4. Route the user based on their role
+        // (Assuming your backend returns a role, or you decode it from the JWT)
+        if (loginType === 'teacher' || data.role === 'ADMIN') {
+          setView('admin');
+        } else {
+          // Check if they have a target role set in the database
+          setView(data.targetRole ? 'roadmap' : 'onboarding');
         }
       } else {
-        setView('setup-password');
-        return;
+        setLoginError('Login succeeded, but no token was received.');
       }
 
-      setTargetRole(student.targetRole || '');
-      setUserSkills(student.userSkills || []);
-      setView(student.targetRole ? 'roadmap' : 'onboarding'); 
-    } else {
-      setLoginError('Invalid Access ID. Please ask your teacher to generate one for you.');
+    } catch (error) {
+      console.error("Login Error:", error);
+      setLoginError('Login failed: Please check your credentials and try again.');
     }
   };
 
@@ -585,8 +573,8 @@ export default function App() {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <button onClick={() => setView('landing')} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
-                Logout
+              <button onClick={() => { localStorage.removeItem('sgm_jwt_token'); setView('landing'); }} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
+               Logout
               </button>
             </div>
           </div>
@@ -669,7 +657,7 @@ export default function App() {
         <div className="max-w-3xl w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-10 shadow-xl mt-6">
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-3xl font-black tracking-tight text-neutral-900 dark:text-white">Set Your Baseline</h2>
-            <button onClick={() => setView('landing')} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-colors">Logout</button>
+            <button onClick={() => { localStorage.removeItem('sgm_jwt_token'); setView('landing'); }} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-colors">Logout</button>
           </div>
           <p className="text-neutral-600 dark:text-neutral-400 mb-8 font-medium">Select your dream career path and any foundational skills you already have.</p>
           
