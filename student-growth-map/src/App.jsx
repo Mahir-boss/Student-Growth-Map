@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { SKILLS, ROLES, PREREQUISITES } from './data';
+
 
 // --- NATIVE ICONS ---
 const ExternalLinkIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>;
@@ -72,6 +72,11 @@ const SkillButton = React.memo(({ skill, isSelected, onClick }) => {
 });
 
 export default function App() {
+  // Database State
+  const [SKILLS, setSkills] = useState([]);
+  const [ROLES, setRoles] = useState([]);
+  const [PREREQUISITES, setPrereqs] = useState([]);
+
   // Global State
   const [view, setView] = useState('landing'); 
   const [darkMode, setDarkMode] = useState(() => {
@@ -115,7 +120,20 @@ export default function App() {
   const [selectedNode, setSelectedNode] = useState(null);
   const [showResources, setShowResources] = useState(false);
 
-  // Sync to LocalStorage & Document Element
+  // Fetch data from Spring Boot Backend on load
+  useEffect(() => {
+    Promise.all([
+      fetch('http://localhost:8080/api/skills').then(res => res.json()),
+      fetch('http://localhost:8080/api/roles').then(res => res.json()),
+      fetch('http://localhost:8080/api/prerequisites').then(res => res.json())
+    ]).then(([skillsData, rolesData, prereqsData]) => {
+      setSkills(skillsData);
+      setRoles(rolesData);
+      setPrereqs(prereqsData);
+    }).catch(err => console.error("Could not reach Spring Boot API:", err));
+  }, []);
+
+  // Sync state to LocalStorage & update Dark Mode Document Element
   useEffect(() => {
     localStorage.setItem('userSkills', JSON.stringify(userSkills));
     localStorage.setItem('targetRole', targetRole);
@@ -152,7 +170,7 @@ export default function App() {
       videoUrl: safeUrl(s.videoUrl || s['Video Course URL']) || `https://www.youtube.com/results?search_query=${encodeURIComponent(skillName)}+course+tutorial`,
       practiceUrl: safeUrl(s.practiceUrl || s['Practice & Cheatsheet URL']) || `https://www.google.com/search?q=${encodeURIComponent(skillName)}+cheatsheet+practice+exercises`
     };
-  }), []);
+  }), [SKILLS]); // <-- Added SKILLS dependency here
 
   const safeRoles = useMemo(() => getArray(ROLES).map((r, idx) => {
     let reqs = r.requiredSkills || r['Required Skill IDs'] || [];
@@ -163,13 +181,12 @@ export default function App() {
       domain: String(r.domain || r['Domain'] || 'IT'),
       requiredSkills: getArray(reqs).map(s => String(s).trim()).filter(Boolean) 
     };
-  }), []);
+  }), [ROLES]); // <-- Added ROLES dependency here
 
   const safePrereqs = useMemo(() => getArray(PREREQUISITES).map(p => ({
     source: String(p.source || p['Prerequisite Skill ID']).trim(),
     target: String(p.target || p['Unlocks Skill ID']).trim()
-  })).filter(p => p.source && p.target), []);
-
+  })).filter(p => p.source && p.target), [PREREQUISITES]); // <-- Added PREREQUISITES dependency here
   // Exact Path Finder
   const requiredPath = useMemo(() => {
     if (!targetRole) return new Set(safeSkills.map(s => s.id));
