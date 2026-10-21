@@ -37,7 +37,6 @@ public class AuthController {
         // AUTO-REGISTRATION MAGIC
         if (userOpt.isEmpty()) {
             if ("teacher".equalsIgnoreCase(loginType) && "admin".equalsIgnoreCase(id.trim())) {
-                // 1. Auto-create the Admin account on first login
                 User adminUser = new User();
                 adminUser.setId("admin");
                 adminUser.setPassword("admin");
@@ -47,7 +46,6 @@ public class AuthController {
                 userOpt = Optional.of(adminUser);
             } 
             else if ("individual".equalsIgnoreCase(loginType)) {
-                // 2. Auto-register a new Individual user
                 User newUser = new User();
                 newUser.setId(id.trim());
                 newUser.setPassword(password);
@@ -57,7 +55,6 @@ public class AuthController {
                 userOpt = Optional.of(newUser);
             } 
             else {
-                // 3. Normal Students must be pre-registered by a teacher
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
             }
         }
@@ -65,15 +62,30 @@ public class AuthController {
         User user = userOpt.get();
 
         if (!user.isHasAccess()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access Revoked by Teacher"));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access Revoked"));
         }
 
+        // --- NEW: PORTAL RESTRICTION LOGIC ---
+        String actualRole = user.getType() != null ? user.getType().toUpperCase() : "STUDENT";
+        
+        if ("teacher".equalsIgnoreCase(loginType) && !"ADMIN".equals(actualRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only teachers can use this portal"));
+        } 
+        else if ("student".equalsIgnoreCase(loginType) && !"STUDENT".equals(actualRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only students can use this portal"));
+        } 
+        else if ("individual".equalsIgnoreCase(loginType) && !"INDIVIDUAL".equals(actualRole)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Only individual users can use this portal"));
+        }
+        // --------------------------------------
+
+        // Final Password Check
         if ((user.getPassword() != null && user.getPassword().equals(password)) || (user.getPassword() == null && password.isEmpty())) {
             String token = jwtUtil.generateToken(user);
             return ResponseEntity.ok(Map.of(
                 "token", token != null ? token : "",
                 "userId", user.getId(),
-                "role", user.getType() != null ? user.getType() : "STUDENT"
+                "role", actualRole
             ));
         }
 
