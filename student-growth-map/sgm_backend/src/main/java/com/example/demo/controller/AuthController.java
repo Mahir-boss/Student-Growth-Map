@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
 public class AuthController {
 
     @Autowired
@@ -23,32 +24,36 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> credentials) {
-        String id = credentials.get("id");
-        String password = credentials.get("password");
+        String id = credentials.getOrDefault("id", credentials.get("username"));
+        String password = credentials.getOrDefault("password", "");
 
-        Optional<User> userOpt = userRepository.findById(id);
+        if (id == null || id.isBlank()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "User ID is required"));
+        }
+
+        Optional<User> userOpt = userRepository.findById(id.trim());
 
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User not found");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "User not found"));
         }
 
         User user = userOpt.get();
 
         // Ensure user has platform access (your custom boolean field)
         if (!user.isHasAccess()) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access Revoked by Teacher");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access Revoked by Teacher"));
         }
 
         // In production, use BCryptPasswordEncoder. For now, matching plain text:
-        if (password.equals(user.getPassword()) || (user.getPassword() == null && password.isEmpty())) {
+        if ((user.getPassword() != null && user.getPassword().equals(password)) || (user.getPassword() == null && password.isEmpty())) {
             String token = jwtUtil.generateToken(user);
             return ResponseEntity.ok(Map.of(
-                "token", token,
+                "token", token != null ? token : "",
                 "userId", user.getId(),
-                "role", user.getType()
+                "role", user.getType() != null ? user.getType() : "STUDENT"
             ));
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
     }
 }

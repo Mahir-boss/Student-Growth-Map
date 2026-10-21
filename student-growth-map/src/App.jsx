@@ -256,8 +256,8 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          username: loginId, 
-          password: loginPass 
+          id: loginId.trim(), 
+          password: loginPass
         })
       });
 
