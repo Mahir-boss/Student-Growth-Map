@@ -121,4 +121,27 @@ public class AuthController {
         
         return ResponseEntity.ok(Map.of("message", "Student created successfully"));
     }
+    @PostMapping("/set-password")
+    public ResponseEntity<?> setPassword(@RequestBody Map<String, String> request) {
+        String id = request.get("id");
+        String password = request.get("password");
+        
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setPassword(password);
+            userRepository.save(user); // Commits the new password to Aiven
+            return ResponseEntity.ok(Map.of("message", "Password saved"));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+    }
+
+    @DeleteMapping("/delete-student/{id}")
+    public ResponseEntity<?> deleteStudent(@PathVariable String id) {
+        if (userRepository.existsById(id)) {
+            userRepository.deleteById(id); // Permanently removes the user
+            return ResponseEntity.ok(Map.of("message", "Student deleted"));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "Student not found"));
+    }
 }
