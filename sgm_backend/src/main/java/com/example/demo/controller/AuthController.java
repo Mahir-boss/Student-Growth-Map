@@ -60,6 +60,12 @@ public class AuthController {
         }
 
         User user = userOpt.get();
+        // --- NEW: AUTO-REPAIR ADMIN ROLE ---
+        if ("admin".equalsIgnoreCase(user.getId()) && !"ADMIN".equalsIgnoreCase(user.getType())) {
+            user.setType("ADMIN");
+            userRepository.save(user); // Automatically fixes the database for you!
+        }
+        // -----------------------------------
 
         if (!user.isHasAccess()) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", "Access Revoked"));
