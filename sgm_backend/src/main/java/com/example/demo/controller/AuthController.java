@@ -97,4 +97,28 @@ public class AuthController {
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials"));
     }
+    @PostMapping("/register-student")
+    public ResponseEntity<?> registerStudent(@RequestBody Map<String, String> request) {
+        String studentId = request.get("id");
+        
+        if (studentId == null || studentId.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Student ID is required"));
+        }
+        
+        // Check if student already exists
+        if (userRepository.findById(studentId.trim()).isPresent()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Student ID already exists"));
+        }
+
+        // Create the student in the database (password is null by default for first-time login)
+        User student = new User();
+        student.setId(studentId.trim());
+        student.setPassword(null);
+        student.setHasAccess(true);
+        student.setType("STUDENT");
+        
+        userRepository.save(student);
+        
+        return ResponseEntity.ok(Map.of("message", "Student created successfully"));
+    }
 }

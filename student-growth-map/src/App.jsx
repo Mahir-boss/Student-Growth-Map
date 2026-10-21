@@ -298,14 +298,32 @@ export default function App() {
     setView('onboarding'); 
   };
 
-  const generateStudent = () => {
+  const generateStudent = async () => {
     const newId = customIdInput.trim() || `STU-${Math.floor(Math.random() * 900 + 100)}`; 
     if (students.find(s => s.id === newId)) {
-      alert("This ID already exists!");
+      alert("This ID already exists locally!");
       return;
     }
-    setStudents([...students, { id: newId, hasAccess: true, password: null, targetRole: '', userSkills: [] }]);
-    setCustomIdInput(''); 
+
+    try {
+      // Send the new student ID to the Spring Boot backend
+      const response = await fetch(`${API_BASE}/api/auth/register-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: newId })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save student to database. Ensure backend is running.");
+      }
+
+      // If successful, update the React UI
+      setStudents([...students, { id: newId, hasAccess: true, password: null, targetRole: '', userSkills: [] }]);
+      setCustomIdInput(''); 
+
+    } catch (error) {
+      alert(error.message);
+    }
   };
 
   const toggleStudentAccess = (id) => {
