@@ -256,9 +256,10 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          id: loginId.trim(), 
-          password: loginPass
-        })
+           id: loginId.trim(), 
+           password: loginPass,
+           loginType: loginType  // <--- Tells the backend which portal is being used
+         })
       });
 
       if (!response.ok) {
