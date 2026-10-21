@@ -344,13 +344,13 @@ export default function App() {
   const deleteStudent = async (id) => {
     if (!window.confirm(`Are you sure you want to permanently delete ${id}?`)) return;
     try {
-      const response = await fetch(`${API_BASE}/api/auth/delete-student/${id}`, { method: 'DELETE' });
-      if (response.ok) {
-        setStudents(students.filter(s => s.id !== id));
-      }
+      // Tell the backend to delete it (if it exists there)
+      await fetch(`${API_BASE}/api/auth/delete-student/${id}`, { method: 'DELETE' });
     } catch (error) {
-      console.error("Failed to delete student", error);
+      console.error("Backend check failed, but removing from UI anyway.", error);
     }
+    // ALWAYS remove it from the React UI and memory, even if it was a ghost
+    setStudents(students.filter(s => s.id !== id));
   };
 
   const toggleSkill = (skillId) => {
