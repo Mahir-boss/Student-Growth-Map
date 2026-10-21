@@ -275,9 +275,11 @@ export default function App() {
         localStorage.setItem('sgm_jwt_token', token);
 
         // 4. Route the user based on their role
-        // (Assuming your backend returns a role, or you decode it from the JWT)
         if (loginType === 'teacher' || data.role === 'ADMIN') {
           setView('admin');
+        } else if (loginType === 'student' && !loginPass) {
+          // Triggers first-login flow if password was left blank
+          setView('setup-password'); 
         } else {
           // Check if they have a target role set in the database
           setView(data.targetRole ? 'roadmap' : 'onboarding');
@@ -292,10 +294,19 @@ export default function App() {
     }
   };
 
-  const saveNewPassword = (e) => {
+  const saveNewPassword = async (e) => {
     e.preventDefault();
-    setStudents(prev => prev.map(s => s.id === loginId ? { ...s, password: newPassword } : s));
-    setView('onboarding'); 
+    try {
+      await fetch(`${API_BASE}/api/auth/set-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: loginId, password: newPassword })
+      });
+      setStudents(prev => prev.map(s => s.id === loginId ? { ...s, password: newPassword } : s));
+      setView('onboarding'); 
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const generateStudent = async () => {
@@ -328,6 +339,18 @@ export default function App() {
 
   const toggleStudentAccess = (id) => {
     setStudents(students.map(s => s.id === id ? { ...s, hasAccess: !s.hasAccess } : s));
+  };
+
+  const deleteStudent = async (id) => {
+    if (!window.confirm(`Are you sure you want to permanently delete ${id}?`)) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/delete-student/${id}`, { method: 'DELETE' });
+      if (response.ok) {
+        setStudents(students.filter(s => s.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete student", error);
+    }
   };
 
   const toggleSkill = (skillId) => {
@@ -644,12 +667,18 @@ export default function App() {
                     <td className="p-5">
                       <span className="px-3 py-1 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-bold rounded-lg text-sm border border-neutral-200 dark:border-neutral-700">{skillCount} Skills Mastered</span>
                     </td>
-                    <td className="p-5 text-right">
+                    <td className="p-5 text-right flex justify-end gap-3">
                       <button 
                         onClick={() => toggleStudentAccess(student.id)}
                         className={`px-4 py-2 rounded-xl font-bold border text-sm transition-all ${student.hasAccess ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100' : 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'}`}
                       >
-                        {student.hasAccess ? 'Revoke Access' : 'Grant Access'}
+                        {student.hasAccess ? 'Revoke' : 'Grant'}
+                      </button>
+                      <button 
+                        onClick={() => deleteStudent(student.id)}
+                        className="px-4 py-2 rounded-xl font-bold text-sm bg-red-600 text-white hover:bg-red-700 transition-all shadow-sm"
+                      >
+                        Delete
                       </button>
                     </td>
                   </tr>
