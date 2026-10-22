@@ -160,7 +160,14 @@ public class AuthController {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             user.setTargetRole(targetRole);
-            user.setUserSkills(skillsSet); // Directly sets the Set<String> for your ElementCollection
+            
+            // FIXED: Hibernate requires you to clear and add to managed collections!
+            if (user.getUserSkills() == null) {
+                user.setUserSkills(new java.util.HashSet<>());
+            }
+            user.getUserSkills().clear();
+            user.getUserSkills().addAll(skillsSet);
+            
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("message", "Progress saved"));
         }

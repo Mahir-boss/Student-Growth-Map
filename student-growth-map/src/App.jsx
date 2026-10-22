@@ -200,7 +200,14 @@ export default function App() {
       .then(data => {
         if (data) {
           if (data.targetRole) setTargetRole(data.targetRole);
-          if (data.userSkills && Array.isArray(data.userSkills)) setUserSkills(data.userSkills);
+          if (data.userSkills && Array.isArray(data.userSkills)) {
+            let cleanSkills = [];
+            data.userSkills.forEach(s => {
+              if (typeof s === 'string' && s.includes(',')) cleanSkills.push(...s.split(','));
+              else cleanSkills.push(s);
+            });
+            setUserSkills(cleanSkills);
+          }
         }
       })
       .catch(err => console.log("No existing progress found."));
@@ -774,7 +781,16 @@ export default function App() {
                         onClick={() => {
                           setViewingStudentId(student.id);
                           setTargetRole(student.targetRole || '');
-                          setUserSkills(student.userSkills || []);
+                          
+                          // Clean up any old comma-separated strings from the database
+                          let cleanSkills = [];
+                          if (Array.isArray(student.userSkills)) {
+                            student.userSkills.forEach(s => {
+                              if (typeof s === 'string' && s.includes(',')) cleanSkills.push(...s.split(','));
+                              else cleanSkills.push(s);
+                            });
+                          }
+                          setUserSkills(cleanSkills);
                           setView('roadmap');
                         }}
                         className="px-4 py-2 rounded-xl font-bold text-sm bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 transition-all shadow-sm"
