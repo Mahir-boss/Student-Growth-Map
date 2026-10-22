@@ -498,7 +498,7 @@ export default function App() {
           </div>
 
           <div className="mt-16 pt-8 border-t border-neutral-200 dark:border-neutral-800 w-full text-neutral-500 dark:text-neutral-400 text-sm font-semibold">
-            Project Members: Aayur Mehrotra, Mahir Jada, Arjun Menon, Ayush Lad • Guide: Prof. Aruna Gupta
+            Project Members: Mahir Jada, Arjun Menon, Ayush Lad, Aayur Mehrotra • Guide: Prof. Aruna Gupta
           </div>
         </main>
       </div>
