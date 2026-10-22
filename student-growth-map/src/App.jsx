@@ -99,7 +99,14 @@ export default function App() {
   const [loginId, setLoginId] = useState(() => localStorage.getItem('sgm_login_id') || '');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
-  const [loginType, setLoginType] = useState(''); 
+  const [loginType, setLoginType] = useState(() => {
+    // Check memory on refresh so React never forgets you are a teacher
+    const savedRole = localStorage.getItem('sgm_user_role');
+    if (savedRole === 'ADMIN' || savedRole === 'teacher') return 'teacher';
+    if (savedRole === 'STUDENT' || savedRole === 'student') return 'student';
+    if (savedRole === 'INDIVIDUAL' || savedRole === 'individual') return 'individual';
+    return '';
+  }); 
   const [newPassword, setNewPassword] = useState(''); 
   const [isLoading, setIsLoading] = useState(false);
   const [viewingStudentId, setViewingStudentId] = useState(null); 
@@ -382,44 +389,55 @@ export default function App() {
   const generateStudent = async () => {
     const newId = customIdInput.trim() || `STU-${Math.floor(Math.random() * 900 + 100)}`; 
     if (students.find(s => s.id === newId)) {
-      alert("This ID already exists locally!");
+      alert("This ID already exists!");
       return;
     }
-
     try {
-      // Send the new student ID to the Spring Boot backend
       const response = await fetch(`${API_BASE}/api/auth/register-student`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}` // <-- ADDED TOKEN
+        },
         body: JSON.stringify({ id: newId })
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to save student to database. Ensure backend is running.");
-      }
-
-      // If successful, update the React UI
+      if (!response.ok) throw new Error("Failed to save student to database.");
+      
       setStudents([...students, { id: newId, hasAccess: true, password: null, targetRole: '', userSkills: [] }]);
       setCustomIdInput(''); 
-
     } catch (error) {
       alert(error.message);
     }
   };
 
-  const toggleStudentAccess = (id) => {
-    setStudents(students.map(s => s.id === id ? { ...s, hasAccess: !s.hasAccess } : s));
+  const toggleStudentAccess = async (id) => {
+    const student = students.find(s => s.id === id);
+    setStudents(students.map(s => s.id === id ? { ...s, hasAccess: !s.hasAccess } : s)); // Fast UI update
+    
+    try {
+      await fetch(`${API_BASE}/api/auth/toggle-access`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}` 
+        },
+        body: JSON.stringify({ id })
+      });
+    } catch (error) {
+      console.error("Failed to sync access state to database", error);
+    }
   };
 
   const deleteStudent = async (id) => {
     if (!window.confirm(`Are you sure you want to permanently delete ${id}?`)) return;
     try {
-      // Tell the backend to delete it (if it exists there)
-      await fetch(`${API_BASE}/api/auth/delete-student/${id}`, { method: 'DELETE' });
+      await fetch(`${API_BASE}/api/auth/delete-student/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}` } // <-- ADDED TOKEN
+      });
     } catch (error) {
-      console.error("Backend check failed, but removing from UI anyway.", error);
+      console.error("Delete request failed", error);
     }
-    // ALWAYS remove it from the React UI and memory, even if it was a ghost
     setStudents(students.filter(s => s.id !== id));
   };
 
@@ -745,7 +763,7 @@ export default function App() {
                   <tr key={student.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors">
                     <td className="p-5 font-bold text-lg font-mono text-amber-600 dark:text-amber-400">
                       {student.id}
-                      {!student.password && <span className="block text-xs text-rose-500 font-semibold mt-0.5">Password not set</span>}
+                      {student.password !== 'set' && <span className="block text-xs text-rose-500 font-semibold mt-0.5">Password not set</span>}
                     </td>
                     <td className="p-5 font-semibold text-neutral-800 dark:text-neutral-200">{roleName}</td>
                     <td className="p-5">

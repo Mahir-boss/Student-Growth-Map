@@ -195,4 +195,16 @@ public class AuthController {
         
         return ResponseEntity.ok(response);
     }
+    @PostMapping("/toggle-access")
+    public ResponseEntity<?> toggleAccess(@RequestBody Map<String, String> request) {
+        String id = request.get("id");
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setHasAccess(!user.isHasAccess());
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("message", "Access updated successfully"));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+    }
 }
