@@ -179,4 +179,20 @@ public class AuthController {
         }
         return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
     }
+    @GetMapping("/students")
+    public ResponseEntity<?> getAllStudents() {
+        java.util.List<User> students = userRepository.findAll().stream()
+            .filter(u -> "STUDENT".equalsIgnoreCase(u.getType()))
+            .collect(java.util.stream.Collectors.toList());
+            
+        java.util.List<Map<String, Object>> response = students.stream().map(s -> Map.of(
+            "id", s.getId(),
+            "hasAccess", s.isHasAccess(),
+            "password", s.getPassword() != null ? "set" : null, // Safely tells frontend if password exists
+            "targetRole", s.getTargetRole() == null ? "" : s.getTargetRole(),
+            "userSkills", s.getUserSkills() != null ? s.getUserSkills() : new java.util.HashSet<>()
+        )).collect(java.util.stream.Collectors.toList());
+        
+        return ResponseEntity.ok(response);
+    }
 }

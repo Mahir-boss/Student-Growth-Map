@@ -101,7 +101,8 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [loginType, setLoginType] = useState(''); 
   const [newPassword, setNewPassword] = useState(''); 
-  const [isLoading, setIsLoading] = useState(false); 
+  const [isLoading, setIsLoading] = useState(false);
+  const [viewingStudentId, setViewingStudentId] = useState(null); 
 
   // Admin State
   const [customIdInput, setCustomIdInput] = useState(''); 
@@ -169,17 +170,18 @@ export default function App() {
     }
 
     // NEW: Auto-save progress to backend whenever you click a node or change roles
-    if (loginId && (userSkills.length > 0 || targetRole)) {
+    const activeSaveId = viewingStudentId || loginId;
+    if (activeSaveId && (userSkills.length > 0 || targetRole)) {
       fetch(`${API_BASE}/api/auth/save-progress`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}`
         },
-        body: JSON.stringify({ id: loginId, targetRole, userSkills })
+        body: JSON.stringify({ id: activeSaveId, targetRole, userSkills })
       }).catch(err => console.log("Silent save failed", err));
     }
-  }, [userSkills, targetRole, students, darkMode, loginId]);
+  }, [userSkills, targetRole, students, darkMode, loginId, viewingStudentId]);
 
   // NEW: Fetch progress from backend when user logs in or refreshes
   useEffect(() => {
@@ -198,14 +200,19 @@ export default function App() {
     }
   }, [loginId]);
 
-  // Sync active student progress to teacher roster
+  // Fetch all students from the database for the Admin Dashboard
   useEffect(() => {
-    if (view !== 'landing' && view !== 'login' && view !== 'login-selection' && view !== 'admin' && view !== 'setup-password' && loginId) {
-      setStudents(prev => prev.map(s => 
-        s.id === loginId ? { ...s, targetRole, userSkills } : s
-      ));
+    if (view === 'admin') {
+      fetch(`${API_BASE}/api/auth/students`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}` }
+      })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => {
+        if (Array.isArray(data)) setStudents(data);
+      })
+      .catch(err => console.error("Failed to fetch students", err));
     }
-  }, [userSkills, targetRole, loginId, view]);
+  }, [view]);
 
   // Data Sanitization
   const safeSkills = useMemo(() => getArray(SKILLS).map((s, idx) => {
@@ -746,6 +753,17 @@ export default function App() {
                     </td>
                     <td className="p-5 text-right flex justify-end gap-3">
                       <button 
+                        onClick={() => {
+                          setViewingStudentId(student.id);
+                          setTargetRole(student.targetRole || '');
+                          setUserSkills(student.userSkills || []);
+                          setView('roadmap');
+                        }}
+                        className="px-4 py-2 rounded-xl font-bold text-sm bg-amber-100 text-amber-800 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 transition-all shadow-sm"
+                      >
+                        View Map
+                      </button>
+                      <button 
                         onClick={() => toggleStudentAccess(student.id)}
                         className={`px-4 py-2 rounded-xl font-bold border text-sm transition-all ${student.hasAccess ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100' : 'bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900'}`}
                       >
@@ -870,17 +888,26 @@ export default function App() {
         {/* Navigation & Controls */}
         <div className="flex items-center justify-between mb-8 max-w-4xl mx-auto">
           <button 
-            onClick={() => setView('onboarding')} 
+            onClick={() => {
+              if (loginType === 'teacher') {
+                setViewingStudentId(null);
+                setView('admin');
+              } else {
+                setView('onboarding');
+              }
+            }} 
             className="text-xs font-bold bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 px-4 py-2.5 rounded-xl hover:border-amber-500 dark:hover:border-amber-400 transition-colors shadow-sm"
           >
-            ← Back to Setup
+            {loginType === 'teacher' ? '← Back to Dashboard' : '← Back to Setup'}
           </button>
           <ThemeToggle />
         </div>
 
         <div className="max-w-4xl mx-auto">
           <header className="mb-14 text-center">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">Career Progression Map</h1>
+            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4">
+              {loginType === 'teacher' ? `Roadmap: ${viewingStudentId}` : 'Career Progression Map'}
+            </h1>
             {targetRole && (
               <p className="text-base font-extrabold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/50 inline-block px-5 py-2 rounded-full border border-amber-300 dark:border-amber-800">
                 Target Role: {safeRoles.find(r => r.id === targetRole)?.title}
