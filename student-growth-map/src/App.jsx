@@ -132,10 +132,19 @@ export default function App() {
 
   // Fetch data from Spring Boot Backend on load
   useEffect(() => {
+    const fetchWithToken = async (url) => {
+      const token = localStorage.getItem('sgm_jwt_token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
+      const response = await fetch(url, { headers });
+      if (!response.ok) return []; // Fallback if unauthorized or backend is sleeping
+      return response.json();
+    };
+
     Promise.all([
-      fetch(`${API_BASE}/api/skills`).then(res => res.json()),
-      fetch(`${API_BASE}/api/roles`).then(res => res.json()),
-      fetch(`${API_BASE}/api/prerequisites`).then(res => res.json())
+      fetchWithToken(`${API_BASE}/api/skills`),
+      fetchWithToken(`${API_BASE}/api/roles`),
+      fetchWithToken(`${API_BASE}/api/prerequisites`)
     ]).then(([skillsData, rolesData, prereqsData]) => {
       setSkills(skillsData);
       setRoles(rolesData);
