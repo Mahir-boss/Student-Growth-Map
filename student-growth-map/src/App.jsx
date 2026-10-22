@@ -93,6 +93,7 @@ export default function App() {
       return localStorage.getItem('sgm_theme') === 'dark';
     } catch { return false; }
   });
+  const [isFetchingData, setIsFetchingData] = useState(true);
   
   // Auth State
   const [loginId, setLoginId] = useState(() => localStorage.getItem('sgm_login_id') || '');
@@ -131,26 +132,28 @@ export default function App() {
   const [showResources, setShowResources] = useState(false);
 
   // Fetch data from Spring Boot Backend on load
-  useEffect(() => {
-    const fetchWithToken = async (url) => {
-      const token = localStorage.getItem('sgm_jwt_token');
-      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-      
-      const response = await fetch(url, { headers });
-      if (!response.ok) return []; // Fallback if unauthorized or backend is sleeping
-      return response.json();
-    };
+      useEffect(() => {
+        const fetchWithToken = async (url) => {
+          const token = localStorage.getItem('sgm_jwt_token');
+          const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+          
+          const response = await fetch(url, { headers });
+          if (!response.ok) return []; 
+          return response.json();
+        };
 
-    Promise.all([
-      fetchWithToken(`${API_BASE}/api/skills`),
-      fetchWithToken(`${API_BASE}/api/roles`),
-      fetchWithToken(`${API_BASE}/api/prerequisites`)
-    ]).then(([skillsData, rolesData, prereqsData]) => {
-      setSkills(skillsData);
-      setRoles(rolesData);
-      setPrereqs(prereqsData);
-    }).catch(err => console.error("Could not reach Spring Boot API:", err));
-  }, []);
+        setIsFetchingData(true);
+        Promise.all([
+          fetchWithToken(`${API_BASE}/api/skills`),
+          fetchWithToken(`${API_BASE}/api/roles`),
+          fetchWithToken(`${API_BASE}/api/prerequisites`)
+        ]).then(([skillsData, rolesData, prereqsData]) => {
+          setSkills(skillsData);
+          setRoles(rolesData);
+          setPrereqs(prereqsData);
+        }).catch(err => console.error("Could not reach Spring Boot API:", err))
+          .finally(() => setIsFetchingData(false));
+      }, []);
 
   // Sync state to LocalStorage & update Dark Mode Document Element
   useEffect(() => {
@@ -856,49 +859,59 @@ export default function App() {
             )}
           </header>
 
-          <div className="relative">
-            {/* Visual connector line */}
-            <div className="absolute left-8 top-4 bottom-0 w-1 bg-neutral-200 dark:bg-neutral-800 rounded-full z-0 hidden md:block"></div>
+          {isFetchingData ? (
+            <div className="flex flex-col items-center justify-center py-24 opacity-75">
+              <svg className="animate-spin h-10 w-10 text-amber-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <p className="text-lg font-bold text-neutral-600 dark:text-neutral-400 animate-pulse">Syncing Map with Database...</p>
+            </div>
+          ) : (
+            <div className="relative">
+              {/* Visual connector line */}
+              <div className="absolute left-8 top-4 bottom-0 w-1 bg-neutral-200 dark:bg-neutral-800 rounded-full z-0 hidden md:block"></div>
 
-            {roadmapData.map((tierGroup, tIdx) => (
-              <div key={tierGroup.tier} className="mb-16 relative z-10">
-                
-                {/* Fixed Non-Sticky Header: Scrolls naturally without getting stuck in the air */}
-                <div className="flex items-center gap-4 mb-6 py-2">
-                  <div className="w-14 h-14 bg-amber-600 dark:bg-amber-500 text-white dark:text-neutral-950 rounded-2xl shadow-md flex items-center justify-center font-black text-2xl flex-shrink-0">
-                    {tIdx + 1}
+              {roadmapData.map((tierGroup, tIdx) => (
+                <div key={tierGroup.tier} className="mb-16 relative z-10">
+                  
+                  {/* Fixed Non-Sticky Header: Scrolls naturally without getting stuck in the air */}
+                  <div className="flex items-center gap-4 mb-6 py-2">
+                    <div className="w-14 h-14 bg-amber-600 dark:bg-amber-500 text-white dark:text-neutral-950 rounded-2xl shadow-md flex items-center justify-center font-black text-2xl flex-shrink-0">
+                      {tIdx + 1}
+                    </div>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-neutral-900 dark:text-white uppercase">{tierGroup.tier} Tier</h2>
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-black tracking-tight text-neutral-900 dark:text-white uppercase">{tierGroup.tier} Tier</h2>
-                </div>
 
-                {/* Categories inside Tier */}
-                <div className="md:ml-20 space-y-6">
-                  {tierGroup.categories.map((cat) => {
-                    const style = CATEGORY_STYLES[cat.category] || DEFAULT_STYLE;
-                    return (
-                      <div key={cat.category} className={`border ${style.border} ${style.bg} rounded-2xl p-6 shadow-sm transition-transform hover:-translate-y-0.5`}>
-                        <div className="flex items-center gap-4 mb-5">
-                          <span className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${style.badge}`}>{cat.category}</span>
-                          <div className="h-px flex-grow bg-neutral-200 dark:bg-neutral-800"></div>
-                        </div>
+                  {/* Categories inside Tier */}
+                  <div className="md:ml-20 space-y-6">
+                    {tierGroup.categories.map((cat) => {
+                      const style = CATEGORY_STYLES[cat.category] || DEFAULT_STYLE;
+                      return (
+                        <div key={cat.category} className={`border ${style.border} ${style.bg} rounded-2xl p-6 shadow-sm transition-transform hover:-translate-y-0.5`}>
+                          <div className="flex items-center gap-4 mb-5">
+                            <span className={`px-3 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${style.badge}`}>{cat.category}</span>
+                            <div className="h-px flex-grow bg-neutral-200 dark:bg-neutral-800"></div>
+                          </div>
 
-                        <div className="flex flex-wrap gap-2.5">
-                          {cat.skills.map(skill => (
-                            <SkillButton 
-                              key={skill.id} 
-                              skill={skill} 
-                              isSelected={selectedNode?.id === skill.id}
-                              onClick={handleInspectSkill}
-                            />
-                          ))}
+                          <div className="flex flex-wrap gap-2.5">
+                            {cat.skills.map(skill => (
+                              <SkillButton 
+                                key={skill.id} 
+                                skill={skill} 
+                                isSelected={selectedNode?.id === skill.id}
+                                onClick={handleInspectSkill}
+                              />
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
