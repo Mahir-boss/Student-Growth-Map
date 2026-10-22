@@ -144,4 +144,39 @@ public class AuthController {
         }
         return ResponseEntity.badRequest().body(Map.of("error", "Student not found"));
     }
+    @PostMapping("/save-progress")
+    public ResponseEntity<?> saveProgress(@RequestBody Map<String, Object> request) {
+        String id = (String) request.get("id");
+        String targetRole = (String) request.get("targetRole");
+        
+        // Safely extract the list of skills sent from React
+        Object skillsObj = request.get("userSkills");
+        java.util.Set<String> skillsSet = new java.util.HashSet<>();
+        if (skillsObj instanceof java.util.List) {
+            skillsSet.addAll((java.util.List<String>) skillsObj);
+        }
+        
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            user.setTargetRole(targetRole);
+            user.setUserSkills(skillsSet); // Directly sets the Set<String> for your ElementCollection
+            userRepository.save(user);
+            return ResponseEntity.ok(Map.of("message", "Progress saved"));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+    }
+
+    @GetMapping("/get-progress/{id}")
+    public ResponseEntity<?> getProgress(@PathVariable String id) {
+        Optional<User> userOpt = userRepository.findById(id);
+        if (userOpt.isPresent()) {
+            User user = userOpt.get();
+            return ResponseEntity.ok(Map.of(
+                "targetRole", user.getTargetRole() == null ? "" : user.getTargetRole(),
+                "userSkills", user.getUserSkills() // Spring Boot will automatically convert this Set to a JSON array for React
+            ));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", "User not found"));
+    }
 }

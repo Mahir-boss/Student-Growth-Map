@@ -30,4 +30,5 @@ public class User {
     @CollectionTable(name = "student_progress", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "skill_id")
     private Set<String> userSkills = new HashSet<>();
+    
 }

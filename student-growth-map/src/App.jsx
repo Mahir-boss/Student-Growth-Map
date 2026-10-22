@@ -155,7 +155,7 @@ export default function App() {
           .finally(() => setIsFetchingData(false));
       }, []);
 
-  // Sync state to LocalStorage & update Dark Mode Document Element
+  // Sync state to LocalStorage, Dark Mode, AND Spring Boot Backend
   useEffect(() => {
     localStorage.setItem('userSkills', JSON.stringify(userSkills));
     localStorage.setItem('targetRole', targetRole);
@@ -167,7 +167,36 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [userSkills, targetRole, students, darkMode]);
+
+    // NEW: Auto-save progress to backend whenever you click a node or change roles
+    if (loginId && (userSkills.length > 0 || targetRole)) {
+      fetch(`${API_BASE}/api/auth/save-progress`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}`
+        },
+        body: JSON.stringify({ id: loginId, targetRole, userSkills })
+      }).catch(err => console.log("Silent save failed", err));
+    }
+  }, [userSkills, targetRole, students, darkMode, loginId]);
+
+  // NEW: Fetch progress from backend when user logs in or refreshes
+  useEffect(() => {
+    if (loginId) {
+      fetch(`${API_BASE}/api/auth/get-progress/${loginId}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('sgm_jwt_token')}` }
+      })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data) {
+          if (data.targetRole) setTargetRole(data.targetRole);
+          if (data.userSkills && Array.isArray(data.userSkills)) setUserSkills(data.userSkills);
+        }
+      })
+      .catch(err => console.log("No existing progress found."));
+    }
+  }, [loginId]);
 
   // Sync active student progress to teacher roster
   useEffect(() => {
