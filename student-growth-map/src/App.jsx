@@ -80,7 +80,14 @@ export default function App() {
   const [PREREQUISITES, setPrereqs] = useState([]);
 
   // Global State
-  const [view, setView] = useState('landing'); 
+  const [view, setView] = useState(() => {
+    if (localStorage.getItem('sgm_jwt_token')) {
+      const role = localStorage.getItem('sgm_user_role');
+      if (role === 'ADMIN' || role === 'teacher') return 'admin';
+      return localStorage.getItem('targetRole') ? 'roadmap' : 'onboarding';
+    }
+    return 'landing';
+  }); 
   const [darkMode, setDarkMode] = useState(() => {
     try {
       return localStorage.getItem('sgm_theme') === 'dark';
@@ -88,7 +95,7 @@ export default function App() {
   });
   
   // Auth State
-  const [loginId, setLoginId] = useState('');
+  const [loginId, setLoginId] = useState(() => localStorage.getItem('sgm_login_id') || '');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loginType, setLoginType] = useState(''); 
@@ -247,6 +254,15 @@ export default function App() {
   }, [userSkills, safeRoles]);
 
   // Actions
+  const handleLogout = () => {
+    localStorage.removeItem('sgm_jwt_token');
+    localStorage.removeItem('sgm_login_id');
+    localStorage.removeItem('sgm_user_role');
+    setLoginId('');
+    setLoginPass('');
+    setView('landing');
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -275,6 +291,8 @@ export default function App() {
       if (token) {
         // 3. Save the token to use in future secured requests
         localStorage.setItem('sgm_jwt_token', token);
+        localStorage.setItem('sgm_login_id', loginId.trim());
+        localStorage.setItem('sgm_user_role', data.role || loginType);
 
         // 4. Route the user based on their role
         if (loginType === 'teacher' || data.role === 'ADMIN') {
@@ -634,7 +652,7 @@ export default function App() {
             </div>
             <div className="flex items-center gap-4">
               <ThemeToggle />
-              <button onClick={() => { localStorage.removeItem('sgm_jwt_token'); setView('landing'); }} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
+              <button onClick={handleLogout} className="bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 px-4 py-2 rounded-xl font-bold hover:bg-neutral-200 dark:hover:bg-neutral-700 transition-colors">
                Logout
               </button>
             </div>
@@ -724,7 +742,7 @@ export default function App() {
         <div className="max-w-3xl w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-3xl p-10 shadow-xl mt-6">
           <div className="flex justify-between items-start mb-2">
             <h2 className="text-3xl font-black tracking-tight text-neutral-900 dark:text-white">Set Your Baseline</h2>
-            <button onClick={() => { localStorage.removeItem('sgm_jwt_token'); setView('landing'); }} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-colors">Logout</button>
+            <button onClick={handleLogout} className="text-sm font-bold text-neutral-500 hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg border border-neutral-200 dark:border-neutral-700 transition-colors">Logout</button>
           </div>
           <p className="text-neutral-600 dark:text-neutral-400 mb-8 font-medium">Select your dream career path and any foundational skills you already have.</p>
           
