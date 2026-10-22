@@ -93,6 +93,7 @@ export default function App() {
   const [loginError, setLoginError] = useState('');
   const [loginType, setLoginType] = useState(''); 
   const [newPassword, setNewPassword] = useState(''); 
+  const [isLoading, setIsLoading] = useState(false); 
 
   // Admin State
   const [customIdInput, setCustomIdInput] = useState(''); 
@@ -249,6 +250,7 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginError('');
+    setIsLoading(true);
 
     try {
       // 1. Send credentials to your Spring Boot Auth Controller
@@ -291,6 +293,8 @@ export default function App() {
     } catch (error) {
       console.error("Login Error:", error);
       setLoginError('Login failed: Please check your credentials and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -552,8 +556,22 @@ export default function App() {
               />
             </div>
 
-            <button type="submit" className="w-full bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-neutral-950 font-extrabold py-4 rounded-xl transition-colors shadow-md">
-              {loginType === 'individual' ? 'Login / Register' : 'Login & Continue'}
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-neutral-950 font-extrabold py-4 rounded-xl transition-colors shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Waking up server...
+                </>
+              ) : (
+                loginType === 'individual' ? 'Login / Register' : 'Login & Continue'
+              )}
             </button>
           </form>
 
@@ -785,10 +803,10 @@ export default function App() {
   // VIEW 5: ROADMAP DASHBOARD (Fixed Header & High-Contrast Colors)
   // ==========================================
   return (
-    <div className={`flex h-screen w-full font-sans overflow-hidden transition-colors duration-200 ${darkMode ? 'dark bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-900'}`}>
+    <div className={`flex flex-col lg:flex-row h-screen w-full font-sans overflow-hidden transition-colors duration-200 ${darkMode ? 'dark bg-neutral-950 text-white' : 'bg-neutral-50 text-neutral-900'}`}>
       
       {/* LEFT PANE: Roadmap Map (Hardware Accelerated, Clean Scrolling) */}
-      <div className="flex-grow h-full overflow-y-auto p-8 lg:p-12 relative border-r border-neutral-200 dark:border-neutral-800 custom-scrollbar transform-gpu will-change-scroll">
+      <div className="flex-grow overflow-y-auto p-4 md:p-8 lg:p-12 relative lg:border-r border-neutral-200 dark:border-neutral-800 custom-scrollbar transform-gpu will-change-scroll">
         
         {/* Navigation & Controls */}
         <div className="flex items-center justify-between mb-8 max-w-4xl mx-auto">
@@ -858,10 +876,10 @@ export default function App() {
       </div>
 
       {/* RIGHT SIDEBAR: Inspector & Job Matcher */}
-      <div className="w-[480px] flex-shrink-0 h-full bg-white dark:bg-neutral-900 flex flex-col shadow-2xl z-20 border-l border-neutral-200 dark:border-neutral-800">
+      <div className="w-full lg:w-[480px] h-[45vh] lg:h-full flex-shrink-0 bg-white dark:bg-neutral-900 flex flex-col shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] lg:shadow-2xl z-20 border-t lg:border-t-0 lg:border-l border-neutral-200 dark:border-neutral-800">
         
         {/* Top Half: Node Inspector */}
-        <div className="p-8 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/70 flex flex-col justify-center relative z-20">
+        <div className="p-5 lg:p-8 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-950/70 flex flex-col justify-center relative z-20">
           {selectedNode ? (
             <>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -932,7 +950,7 @@ export default function App() {
         </div>
 
         {/* Bottom Half: Closest Jobs Matcher */}
-        <div className="p-8 flex-grow overflow-y-auto bg-white dark:bg-neutral-900 custom-scrollbar z-10 transform-gpu will-change-scroll">
+        <div className="p-5 lg:p-8 flex-grow overflow-y-auto bg-white dark:bg-neutral-900 custom-scrollbar z-10 transform-gpu will-change-scroll">
           <h3 className="text-xl font-black mb-1 tracking-tight text-neutral-900 dark:text-white">Role Matcher</h3>
           <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 font-bold uppercase tracking-wider">Click any role to update your targeted path</p>
           <div className="space-y-4">
