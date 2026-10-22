@@ -891,6 +891,8 @@ export default function App() {
             onClick={() => {
               if (loginType === 'teacher') {
                 setViewingStudentId(null);
+                setUserSkills([]); // <-- Clears skills so they don't auto-save to admin
+                setTargetRole(''); // <-- Clears target role
                 setView('admin');
               } else {
                 setView('onboarding');
@@ -1018,16 +1020,20 @@ export default function App() {
               {/* Master Button */}
               <button 
                 onClick={() => toggleSkill(selectedNode.id)}
-                disabled={selectedNode.isLocked}
+                disabled={selectedNode.isLocked || loginType === 'teacher'}
                 className={`w-full py-4 rounded-xl font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-all border ${
                   selectedNode.isCompleted 
                     ? 'bg-emerald-600 border-emerald-600 text-white shadow-md' 
-                    : selectedNode.isLocked 
+                    : (selectedNode.isLocked || loginType === 'teacher') 
                       ? 'bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-400 dark:text-neutral-500 cursor-not-allowed' 
                       : 'bg-amber-600 hover:bg-amber-700 dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-neutral-950 shadow-md'
                 }`}
               >
-                {selectedNode.isCompleted ? <><CheckIcon /> Mastered</> : 'Mark as Mastered'}
+                {selectedNode.isCompleted 
+                  ? <><CheckIcon /> Mastered</> 
+                  : loginType === 'teacher' 
+                    ? 'Not Mastered Yet' 
+                    : 'Mark as Mastered'}
               </button>
 
               {selectedNode.isLocked && (
@@ -1048,18 +1054,22 @@ export default function App() {
         {/* Bottom Half: Closest Jobs Matcher */}
         <div className="p-5 lg:p-8 flex-grow overflow-y-auto bg-white dark:bg-neutral-900 custom-scrollbar z-10 transform-gpu will-change-scroll">
           <h3 className="text-xl font-black mb-1 tracking-tight text-neutral-900 dark:text-white">Role Matcher</h3>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 font-bold uppercase tracking-wider">Click any role to update your targeted path</p>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-6 font-bold uppercase tracking-wider">
+            {loginType === 'teacher' ? "Student's Role Compatibility" : "Click any role to update your targeted path"}
+          </p>
           <div className="space-y-4">
             {roleMatches.map((role) => {
               const isTarget = role.id === targetRole;
               return (
                 <div 
                   key={role.id} 
-                  onClick={() => setTargetRole(role.id)}
-                  className={`p-5 rounded-2xl border cursor-pointer transition-all ${
+                  onClick={() => { if (loginType !== 'teacher') setTargetRole(role.id); }}
+                  className={`p-5 rounded-2xl border transition-all ${
+                    loginType !== 'teacher' ? 'cursor-pointer hover:border-amber-400 dark:hover:border-amber-600' : ''
+                  } ${
                     isTarget 
                       ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-500 dark:border-amber-500 shadow-md ring-1 ring-amber-500' 
-                      : 'bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 hover:border-amber-400 dark:hover:border-amber-600'
+                      : 'bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800'
                   }`}
                 >
                   <div className="flex justify-between items-start mb-3 gap-2">

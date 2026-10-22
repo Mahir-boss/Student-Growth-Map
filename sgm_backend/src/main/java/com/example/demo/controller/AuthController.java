@@ -188,7 +188,7 @@ public class AuthController {
         java.util.List<Map<String, Object>> response = students.stream().map(s -> Map.of(
             "id", s.getId(),
             "hasAccess", s.isHasAccess(),
-            "password", s.getPassword() != null ? "set" : null, // Safely tells frontend if password exists
+            "password", s.getPassword() != null ? "set" : "not-set", // FIXED: Map.of strictly forbids null values
             "targetRole", s.getTargetRole() == null ? "" : s.getTargetRole(),
             "userSkills", s.getUserSkills() != null ? s.getUserSkills() : new java.util.HashSet<>()
         )).collect(java.util.stream.Collectors.toList());
